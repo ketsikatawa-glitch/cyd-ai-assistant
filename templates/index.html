@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYD AI Assistant</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #10141f;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .chat {
+            width: 90%;
+            max-width: 650px;
+            background: #1b2233;
+            border: 1px solid #34405a;
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #65d6ff;
+            text-align: center;
+        }
+
+        #messages {
+            height: 350px;
+            overflow-y: auto;
+            background: #111827;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .user {
+            background: #244a70;
+        }
+
+        .ai {
+            background: #30394c;
+        }
+
+        form {
+            display: flex;
+            gap: 8px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+        }
+
+        button {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            background: #65d6ff;
+            color: #10141f;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="chat">
+        <h1>CYD AI Assistant</h1>
+
+        <div id="messages" aria-live="polite">
+            <div class="message ai">
+                Hello! I'm your AI assistant. What would you like to learn?
+            </div>
+        </div>
+
+        <form id="chatForm">
+            <input
+                id="messageInput"
+                type="text"
+                placeholder="Ask me anything..."
+                autocomplete="off"
+                required
+            >
+            <button id="sendButton" type="submit">Send</button>
+        </form>
+    </main>
+
+    <script>
+        const form = document.getElementById("chatForm");
+        const input = document.getElementById("messageInput");
+        const messages = document.getElementById("messages");
+        const sendButton = document.getElementById("sendButton");
+
+        function addMessage(text, type) {
+            const message = document.createElement("div");
+            message.className = `message ${type}`;
+            message.textContent = text;
+            messages.appendChild(message);
+            messages.scrollTop = messages.scrollHeight;
+            return message;
+        }
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const text = input.value.trim();
+            if (!text) return;
+
+            addMessage(text, "user");
+            input.value = "";
+            sendButton.disabled = true;
+
+            const loading = addMessage("Thinking...", "ai");
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ message: text })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Request failed.");
+                }
+
+                loading.textContent = data.reply || "No response received.";
+            } catch (error) {
+                loading.textContent = "Error: " + error.message;
+            } finally {
+                sendButton.disabled = false;
+                input.focus();
+                messages.scrollTop = messages.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html>
