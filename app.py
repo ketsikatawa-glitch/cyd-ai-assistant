@@ -1,8 +1,8 @@
 from flask import Flask, request, jsonify, render_template
 from google import genai
-import time
 from google.genai import errors
 import os
+import time
 
 app = Flask(__name__)
 
@@ -25,22 +25,30 @@ Keep responses short because the screen is small.
 def home():
     return render_template("index.html")
 
+
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.get_json(silent=True) or {}
     message = data.get("message", "").strip()
 
+    if not isinstance(message, str):
+        return jsonify({"error": "Message must be text."}), 400
+
     if not message:
-        return jsonify({"error": "Message cannot be empty"}), 400
+        return jsonify({"error": "Message cannot be empty."}), 400
 
     if len(message) > 2000:
-        return jsonify({"error": "Message is too long"}), 400
+        return jsonify({"error": "Message is too long."}), 400
 
     for attempt in range(3):
         try:
             response = client.models.generate_content(
                 model="gemini-3.8-flash",
-                contents=f"{SYSTEM_PROMPT}\n\nUser: {message}"
+                config={
+                    "system_instruction": SYSTEM_PROMPT,
+                    "max_output_tokens": 250,
+                },
+                contents=message,
             )
 
             return jsonify({
@@ -48,13 +56,18 @@ def chat():
             })
 
         except errors.APIError as e:
+            app.logger.error(
+                "Gemini API error: code=%s, message=%s",
+                e.code,
+                str(e),
+            )
+
             if e.code == 503 and attempt < 2:
                 time.sleep(2 * (attempt + 1))
                 continue
 
-            app.logger.exception("Gemini API request failed")
             return jsonify({
-                "error": f"Gemini is temporarily unavailable (HTTP {e.code}). Please try again."
+                "error": f"Gemini request failed (HTTP {e.code}). Check the Flask terminal."
             }), 502
 
         except Exception:
@@ -65,4 +78,4 @@ def chat():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5500)
