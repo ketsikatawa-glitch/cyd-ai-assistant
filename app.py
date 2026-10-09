@@ -6,9 +6,7 @@ import time
 
 app = Flask(__name__)
 
-GEMINI_API_KEY = "AIzaSyA9lKEaTathIhT178O2fygvCXixJcGNb7o"
-
-api_key = os.environ.get(GEMINI_API_KEY)
+api_key = os.environ.get("GEMINI_API_KEY")
 
 if not api_key:
     raise RuntimeError(
